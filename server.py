@@ -7,10 +7,12 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Annotated
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from mcp.server.fastmcp import FastMCP  # noqa: E402
+from pydantic import Field  # noqa: E402
 
 from recalls_server import tools  # noqa: E402
 
@@ -33,11 +35,17 @@ mcp = FastMCP(
 
 @mcp.tool()
 def search_recalls(
-    query: str = "",
+    query: Annotated[
+        str,
+        Field(description="Keywords in title, product, or hazard. Never Amazon/Walmart — use sold_at."),
+    ] = "",
     year: int | None = None,
     limit: int = 20,
     cursor: int = 0,
-    sold_at: str = "",
+    sold_at: Annotated[
+        str,
+        Field(description="Retailer on the sold_at column only, e.g. Amazon or Walmart. Not for last-N-days; use recent_recalls."),
+    ] = "",
 ) -> dict:
     """Search product recalls, newest first. Not for 'last N days sold at X' — use recent_recalls.
 
@@ -50,7 +58,17 @@ def search_recalls(
 
 
 @mcp.tool()
-def count_recalls(query: str = "", year: int | None = None, sold_at: str = "") -> dict:
+def count_recalls(
+    query: Annotated[
+        str,
+        Field(description="Keywords in title/product/hazard. Not a retailer — use sold_at for Amazon/Walmart."),
+    ] = "",
+    year: int | None = None,
+    sold_at: Annotated[
+        str,
+        Field(description="Retailer filter on sold_at only, e.g. Walmart. Use this for 'how many sold at X'."),
+    ] = "",
+) -> dict:
     """Count recall announcements. Same filters as search_recalls: retailer goes in `sold_at`, not `query`."""
     return tools.count_recalls(query, year, sold_at)
 
@@ -65,12 +83,22 @@ def get_recall(recall_number: str) -> dict:
 
 
 @mcp.tool()
-def recent_recalls(days: int = 30, sold_at: str = "") -> dict:
-    """Last `days` days of recalls (default 30, max 365), newest first.
+def recent_recalls(
+    days: Annotated[int, Field(description="Lookback window, 1–365. Default 30.")] = 30,
+    # Field() is what Cursor puts in the JSON schema. Docstrings alone were ignored; agents skipped sold_at.
+    sold_at: Annotated[
+        str,
+        Field(
+            description=(
+                "REQUIRED when the user names a retailer. Last 30 days sold on Amazon: "
+                'days=30 and sold_at="Amazon" in this same call. Do not call search_recalls.'
+            ),
+        ),
+    ] = "",
+) -> dict:
+    """Recalls in the last `days` days, optionally only those sold at `sold_at` (Amazon, Walmart).
 
-    If the user names a retailer, `sold_at` is required. Calling this with only `days` and then
-    searching Amazon is wrong. Example — last 30 days sold on Amazon:
-    recent_recalls(days=30, sold_at="Amazon"). One call, no search_recalls.
+    For 'last 30 days sold on Amazon' pass both: days=30, sold_at="Amazon". One call.
     """
     return tools.recent_recalls(days, sold_at=sold_at)
 
