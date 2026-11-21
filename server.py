@@ -16,60 +16,36 @@ from pydantic import Field  # noqa: E402
 
 from recalls_server import tools  # noqa: E402
 
-# Cold agents never saw our Q2 plan. These lines are how they pick tools: sold_at, not query.
+# One tool for both Q2 and "last N days": recent_recalls. Omit sold_at when no store is named.
 mcp = FastMCP(
     "recalls",
     instructions=(
         "Product recall lookups for the marketplace-safety team. Data comes from the US Consumer "
         "Product Safety Commission and is refreshed nightly. "
-        "Any 'sold at/on/listed at' retailer question (Amazon, Walmart, Target, …) — including "
-        "last 7/30/60/90/N days — is sold_at_recalls only. sold_at is required; days is the "
-        "lookback (30 if they say last month / last 30 days). One call. Do not use "
-        "recent_recalls (that tool has no retailer filter) and do not use search_recalls query. "
+        "Use recent_recalls for last-N-days lists. If they name a retailer (Amazon, Walmart, "
+        "sold at/on/listed at), pass sold_at in that same call — e.g. days=30, sold_at=Amazon. "
+        "If they do not name a store, call recent_recalls with only days. Do not also call "
+        "search_recalls. Never put Amazon/Walmart in query. "
         "Use count_recalls for 'how many recalls' (announcements), not paging search_recalls."
     ),
 )
 
 
 @mcp.tool()
-def sold_at_recalls(
-    sold_at: Annotated[
-        str,
-        Field(
-            description="Retailer, required. Amazon, Walmart, Target, … — 'sold at', 'sold on', or 'listed at'.",
-        ),
-    ],
-    days: Annotated[
-        int | None,
-        Field(
-            description="Lookback in days, 1–365. 7=last week, 30=last 30 days, 60, 90, or any N they name. Omit for all time.",
-        ),
-    ] = None,
-    year: int | None = None,
-) -> dict:
-    """The Q2 tool: recalls sold at a retailer, optionally in the last N days.
-
-    Examples: last 30 days on Amazon → sold_at=Amazon, days=30. Last 90 days at Walmart →
-    sold_at=Walmart, days=90. Do not call recent_recalls or search_recalls for these.
-    """
-    return tools.sold_at_recalls(sold_at, days=days, year=year)
-
-
-@mcp.tool()
 def search_recalls(
     query: Annotated[
         str,
-        Field(description="Keywords in title, product, or hazard. Never Amazon/Walmart — use sold_at."),
+        Field(description="Keywords in title, product, or hazard. Never Amazon/Walmart — use recent_recalls sold_at for last N days."),
     ] = "",
     year: int | None = None,
     limit: int = 20,
     cursor: int = 0,
     sold_at: Annotated[
         str,
-        Field(description="Retailer, sold_at column only. For last N days sold at X use sold_at_recalls, not this tool."),
+        Field(description="Retailer, sold_at column only. For last N days sold at X use recent_recalls(days, sold_at), not query."),
     ] = "",
 ) -> dict:
-    """Search product recalls, newest first. Not for 'last N days sold at X' — use sold_at_recalls.
+    """Search product recalls, newest first. Not for 'last N days sold at X' — use recent_recalls.
 
     `query`: keywords in title, product name, and hazard. Do not put a retailer here.
     `year` limits to that year. Returns `total`, up to `limit` results (max 50), and
@@ -87,7 +63,7 @@ def count_recalls(
     year: int | None = None,
     sold_at: Annotated[
         str,
-        Field(description="Retailer filter. For a list of last-N-days sold at X, use sold_at_recalls instead."),
+        Field(description="Retailer filter. For a last-N-days list sold at X, use recent_recalls(days, sold_at)."),
     ] = "",
 ) -> dict:
     """Count recall announcements. Same filters as search_recalls: retailer goes in `sold_at`, not `query`."""
@@ -105,13 +81,23 @@ def get_recall(recall_number: str) -> dict:
 
 @mcp.tool()
 def recent_recalls(
-    days: Annotated[int, Field(description="Lookback window, 1–365. Default 30. No retailer filter.")] = 30,
+    days: Annotated[int, Field(description="Lookback, 1–365. Default 30. Use 60, 90, or any N they name.")] = 30,
+    sold_at: Annotated[
+        str,
+        Field(
+            description=(
+                "Retailer on the sold_at column (Amazon, Walmart, …). Pass this in the SAME call "
+                "when they say sold at/on X. Omit it when they only ask for the last N days."
+            ),
+        ),
+    ] = "",
 ) -> dict:
-    """Recalls announced in the last `days` days. Date window only — no Amazon/Walmart filter.
+    """Last `days` days of recalls. One tool for two questions.
 
-    If the user names a store, do not use this tool; use sold_at_recalls(sold_at, days).
+    Last 30 days sold on Amazon: days=30 AND sold_at=Amazon (do not call search_recalls).
+    Last 30 days with no store: days=30 only, omit sold_at.
     """
-    return tools.recent_recalls(days)
+    return tools.recent_recalls(days, sold_at=sold_at)
 
 
 @mcp.tool()
