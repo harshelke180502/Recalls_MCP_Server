@@ -26,6 +26,8 @@ mcp = FastMCP(
         "sold at/on/listed at), pass sold_at in that same call — e.g. days=30, sold_at=Amazon. "
         "If they do not name a store, call recent_recalls with only days. Do not also call "
         "search_recalls. Never put Amazon/Walmart in query. "
+        "Which recall had the most units (e.g. in 2024): one search_recalls with year, "
+        "sort=units, limit=1. Do not use count_recalls for that (count is announcements). "
         "Use count_recalls for 'how many recalls' (announcements), not paging search_recalls."
     ),
 )
@@ -44,14 +46,23 @@ def search_recalls(
         str,
         Field(description="Retailer, sold_at column only. For last N days sold at X use recent_recalls(days, sold_at), not query."),
     ] = "",
+    sort: Annotated[
+        str,
+        Field(
+            description=(
+                "'date' (default, newest first) or 'units' (largest first). "
+                "Most units in a year: year=2024, sort=units, limit=1. One call, not count_recalls."
+            ),
+        ),
+    ] = "date",
 ) -> dict:
-    """Search product recalls, newest first. Not for 'last N days sold at X' — use recent_recalls.
+    """Search product recalls. Default newest first. For most units, pass sort=units.
 
     `query`: keywords in title, product name, and hazard. Do not put a retailer here.
-    `year` limits to that year. Returns `total`, up to `limit` results (max 50), and
-    `next_cursor` when there are more: pass it back as `cursor`.
+    `year` limits to that year. `sort=units` ranks by the units column (Q3). Returns `total`,
+    up to `limit` results (max 50), and `next_cursor` when there are more.
     """
-    return tools.search_recalls(query, year, limit, cursor, sold_at)
+    return tools.search_recalls(query, year, limit, cursor, sold_at, sort)
 
 
 @mcp.tool()

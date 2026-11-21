@@ -54,18 +54,27 @@ def _where(query: str, year: int | None, sold_at: str = "") -> tuple[str, list[A
     return (" WHERE " + " AND ".join(clauses)) if clauses else "", params
 
 
+def _order(sort: str) -> str:
+    # Whitelist only: Q3 needs units desc. Anything else stays newest-first (original search).
+    if (sort or "").strip().lower() == "units":
+        return "ORDER BY units DESC, recall_date DESC, recall_number DESC"
+    return "ORDER BY recall_date DESC, recall_number DESC"
+
+
 def search(
     query: str = "",
     year: int | None = None,
     limit: int = 20,
     offset: int = 0,
     sold_at: str = "",
+    sort: str = "date",
 ) -> tuple[int, list[dict]]:
     where, params = _where(query, year, sold_at)
+    order = _order(sort)
     with connect() as con:
         total = con.execute(f"SELECT COUNT(*) FROM recalls{where}", params).fetchone()[0]
         rows = con.execute(
-            f"SELECT {SUMMARY_COLUMNS} FROM recalls{where} ORDER BY recall_date DESC, recall_number DESC LIMIT ? OFFSET ?",
+            f"SELECT {SUMMARY_COLUMNS} FROM recalls{where} {order} LIMIT ? OFFSET ?",
             params + [limit, offset],
         ).fetchall()
     return total, [dict(r) for r in rows]

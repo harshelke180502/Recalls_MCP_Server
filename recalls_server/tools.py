@@ -15,13 +15,16 @@ def search_recalls(
     limit: int = 20,
     cursor: int = 0,
     sold_at: str = "",
+    sort: str = "date",
 ) -> dict:
     limit = clamp_limit(limit)
     cursor = max(cursor or 0, 0)
-    total, rows = db.search(query, year, limit, cursor, sold_at)
+    total, rows = db.search(query, year, limit, cursor, sold_at, sort)
     payload = {"total": total, "results": rows}
     if sold_at.strip():
         payload["sold_at"] = sold_at.strip()
+    if (sort or "").strip().lower() == "units":
+        payload["sort"] = "units"
     if cursor + len(rows) < total:
         payload["next_cursor"] = cursor + limit
     return fit(payload)
