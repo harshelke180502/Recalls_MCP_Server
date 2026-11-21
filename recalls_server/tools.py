@@ -23,6 +23,7 @@ def search_recalls(
     payload = {"total": total, "results": rows}
     if sold_at.strip():
         payload["sold_at"] = sold_at.strip()
+    # Q3: year=2024, sort=units, limit=1. "How many" is results[0]["units"] on that one recall.
     if (sort or "").strip().lower() == "units":
         payload["sort"] = "units"
     if cursor + len(rows) < total:

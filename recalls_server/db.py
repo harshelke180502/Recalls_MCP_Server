@@ -55,7 +55,9 @@ def _where(query: str, year: int | None, sold_at: str = "") -> tuple[str, list[A
 
 
 def _order(sort: str) -> str:
-    # Whitelist only: Q3 needs units desc. Anything else stays newest-first (original search).
+    # Q3: "most units" = the one recall_number with the largest units (max), not a sum
+    # of duplicate products. See assumptions.md if Dana wanted GROUP BY product + SUM.
+    # Only "units" is extra; anything else stays newest-first so old search still works.
     if (sort or "").strip().lower() == "units":
         return "ORDER BY units DESC, recall_date DESC, recall_number DESC"
     return "ORDER BY recall_date DESC, recall_number DESC"
