@@ -22,15 +22,32 @@ mcp = FastMCP(
     instructions=(
         "Product recall lookups for the marketplace-safety team. Data comes from the US Consumer "
         "Product Safety Commission and is refreshed nightly. "
-        "If the question is last N days AND sold at a retailer (Amazon, Walmart, …), call only "
-        "recent_recalls with both days and sold_at. Do not call search_recalls or count_recalls "
-        "for that question, and do not omit sold_at. "
-        "If the question is sold at a retailer with no date window, use search_recalls or "
-        "count_recalls with sold_at. Never put Amazon/Walmart in query — query is keywords in "
-        "title/product/hazard, not a retailer filter. "
+        "For anything 'sold at Amazon/Walmart/…' call sold_at_recalls. sold_at is required. "
+        "Last 30 days sold on Amazon: sold_at_recalls(sold_at='Amazon', days=30) — one call, "
+        "not recent_recalls then search_recalls. "
+        "Never put Amazon/Walmart in query. "
         "Use count_recalls for 'how many recalls' (announcements), not paging search_recalls."
     ),
 )
+
+
+@mcp.tool()
+def sold_at_recalls(
+    sold_at: Annotated[
+        str,
+        Field(description="Retailer, required. Examples: Amazon, Walmart. Matches the sold_at column only."),
+    ],
+    days: Annotated[
+        int | None,
+        Field(description="Last N days (1–365). Pass 30 for 'last 30 days'. Omit for all time."),
+    ] = None,
+    year: int | None = None,
+) -> dict:
+    """List recalls sold at a retailer. Use this for every 'sold at X' question, including last N days.
+
+    Last 30 days on Amazon: sold_at='Amazon', days=30. Do not also call recent_recalls or search_recalls.
+    """
+    return tools.sold_at_recalls(sold_at, days=days, year=year)
 
 
 @mcp.tool()

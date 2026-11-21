@@ -42,6 +42,23 @@ def get_recall(recall_number: str) -> dict:
     return record
 
 
+def sold_at_recalls(
+    sold_at: str,
+    days: int | None = None,
+    year: int | None = None,
+    today: dt.date | None = None,
+    limit: int = 20,
+    cursor: int = 0,
+) -> dict:
+    # Q2 for a cold agent: retailer is required, so they cannot "recent then search Amazon".
+    sold_at = (sold_at or "").strip()
+    if not sold_at:
+        return {"saved": False, "error": "sold_at is required", "count": 0, "results": []}
+    if days:
+        return recent_recalls(days, today=today, sold_at=sold_at)
+    return search_recalls(year=year, sold_at=sold_at, limit=limit, cursor=cursor)
+
+
 def recent_recalls(days: int = 30, today: dt.date | None = None, sold_at: str = "") -> dict:
     # Keep a 1–365 day cap: this tool is a short window, and results are already limited to 50 rows.
     days = max(1, min(days or 30, 365))
