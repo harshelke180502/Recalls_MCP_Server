@@ -84,16 +84,16 @@ class ToolTests(unittest.TestCase):
         out = tools.recent_recalls(30, today=dt.date(2026, 3, 25))
         self.assertEqual([r["recall_number"] for r in out["results"]], ["26108", "26107", "26106", "26105"])
 
-    def test_sold_at_recalls_q2_last_30_days_amazon(self):
-        # Cold-agent Q2 path: required sold_at + days, not recent_recalls then search.
-        out = tools.sold_at_recalls("Amazon", days=30, today=dt.date(2026, 3, 25))
-        self.assertEqual([r["recall_number"] for r in out["results"]], ["26105"])
-        self.assertEqual(out["count"], 1)
-
-    def test_sold_at_recalls_requires_retailer(self):
-        out = tools.sold_at_recalls("  ")
-        self.assertEqual(out["count"], 0)
-        self.assertIn("sold_at", out["error"])
+    # sold_at_recalls is unused: Q2 is covered by recent_recalls(days, sold_at).
+    # def test_sold_at_recalls_q2_last_30_days_amazon(self):
+    #     out = tools.sold_at_recalls("Amazon", days=30, today=dt.date(2026, 3, 25))
+    #     self.assertEqual([r["recall_number"] for r in out["results"]], ["26105"])
+    #     self.assertEqual(out["count"], 1)
+    #
+    # def test_sold_at_recalls_requires_retailer(self):
+    #     out = tools.sold_at_recalls("  ")
+    #     self.assertEqual(out["count"], 0)
+    #     self.assertIn("sold_at", out["error"])
 
     def test_recent_recalls_sold_at_amazon_last_30_days(self):
         # Q2: last X days + sold at Amazon in one call. Fixture "today" is 2026-03-25.
