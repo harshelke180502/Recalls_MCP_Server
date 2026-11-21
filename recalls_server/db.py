@@ -34,7 +34,7 @@ def normalize_recall_number(value: str) -> str:
     return re.sub(r"\D", "", value or "")
 
 
-def _where(query: str, year: int | None) -> tuple[str, list[Any]]:
+def _where(query: str, year: int | None, sold_at: str = "") -> tuple[str, list[Any]]:
     clauses: list[str] = []
     params: list[Any] = []
     query = (query or "").strip()
@@ -46,11 +46,22 @@ def _where(query: str, year: int | None) -> tuple[str, list[Any]]:
         # Recall numbers start with the two-digit year and the column is indexed.
         clauses.append("recall_number LIKE ?")
         params.append(f"{int(year) % 100:02d}%")
+    # Retailer questions (Dana / Q2 / Q4) must not reuse `query` — that also hits title and hazard.
+    sold_at = (sold_at or "").strip()
+    if sold_at:
+        clauses.append("sold_at LIKE ?")
+        params.append(f"%{sold_at}%")
     return (" WHERE " + " AND ".join(clauses)) if clauses else "", params
 
 
-def search(query: str = "", year: int | None = None, limit: int = 20, offset: int = 0) -> tuple[int, list[dict]]:
-    where, params = _where(query, year)
+def search(
+    query: str = "",
+    year: int | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    sold_at: str = "",
+) -> tuple[int, list[dict]]:
+    where, params = _where(query, year, sold_at)
     with connect() as con:
         total = con.execute(f"SELECT COUNT(*) FROM recalls{where}", params).fetchone()[0]
         rows = con.execute(
@@ -60,8 +71,8 @@ def search(query: str = "", year: int | None = None, limit: int = 20, offset: in
     return total, [dict(r) for r in rows]
 
 
-def count(query: str = "", year: int | None = None) -> int:
-    where, params = _where(query, year)
+def count(query: str = "", year: int | None = None, sold_at: str = "") -> int:
+    where, params = _where(query, year, sold_at)
     with connect() as con:
         return con.execute(f"SELECT COUNT(*) FROM recalls{where}", params).fetchone()[0]
 
@@ -81,13 +92,21 @@ def get(recall_number: str) -> dict | None:
     return record
 
 
-def recent(days: int, today: dt.date | None = None, limit: int = 50) -> list[dict]:
+def recent(days: int, today: dt.date | None = None, limit: int = 50, sold_at: str = "") -> list[dict]:
     today = today or dt.date.today()
     since = (today - dt.timedelta(days=days)).isoformat()
+    # Date window is not part of _where (that helper is query/year/sold_at). Combine here for Q2.
+    clauses = ["recall_date >= ?"]
+    params: list[Any] = [since]
+    sold_at = (sold_at or "").strip()
+    if sold_at:
+        clauses.append("sold_at LIKE ?")
+        params.append(f"%{sold_at}%")
+    where = " WHERE " + " AND ".join(clauses)
     with connect() as con:
         rows = con.execute(
-            f"SELECT {SUMMARY_COLUMNS} FROM recalls WHERE recall_date >= ? ORDER BY recall_date DESC, recall_number DESC LIMIT ?",
-            [since, limit],
+            f"SELECT {SUMMARY_COLUMNS} FROM recalls{where} ORDER BY recall_date DESC, recall_number DESC LIMIT ?",
+            params + [limit],
         ).fetchall()
     return [dict(r) for r in rows]
 

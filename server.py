@@ -19,26 +19,35 @@ mcp = FastMCP(
     instructions=(
         "Product recall lookups for the marketplace-safety team. Data comes from the US Consumer "
         "Product Safety Commission and is refreshed nightly. Use count_recalls for 'how many' "
-        "questions instead of paging search_recalls."
+        "questions instead of paging search_recalls. For 'sold at Amazon/Walmart' use the sold_at "
+        "argument (not query). For 'last N days sold at X' call recent_recalls with days and sold_at."
     ),
 )
 
 
 @mcp.tool()
-def search_recalls(query: str = "", year: int | None = None, limit: int = 20, cursor: int = 0) -> dict:
+def search_recalls(
+    query: str = "",
+    year: int | None = None,
+    limit: int = 20,
+    cursor: int = 0,
+    sold_at: str = "",
+) -> dict:
     """Search product recalls, newest first.
 
     `query` matches the recall title, product name, hazard and where the product was sold.
+    `sold_at` is the retailer filter: it matches only the sold_at column (e.g. Amazon, Walmart).
+    Use sold_at for 'sold at X' questions — query also hits titles, so it over-counts retailers.
     `year` limits results to recalls from that year. Returns `total` (all matches), up to
     `limit` results (max 50), and `next_cursor` when there are more: pass it back as `cursor`.
     """
-    return tools.search_recalls(query, year, limit, cursor)
+    return tools.search_recalls(query, year, limit, cursor, sold_at)
 
 
 @mcp.tool()
-def count_recalls(query: str = "", year: int | None = None) -> dict:
-    """Count recalls matching `query` and/or `year`. Same matching rules as search_recalls."""
-    return tools.count_recalls(query, year)
+def count_recalls(query: str = "", year: int | None = None, sold_at: str = "") -> dict:
+    """Count recalls matching `query`, `year`, and/or `sold_at`. Same matching rules as search_recalls."""
+    return tools.count_recalls(query, year, sold_at)
 
 
 @mcp.tool()
@@ -51,9 +60,13 @@ def get_recall(recall_number: str) -> dict:
 
 
 @mcp.tool()
-def recent_recalls(days: int = 30) -> dict:
-    """List recalls announced in the last `days` days (default 30), newest first."""
-    return tools.recent_recalls(days)
+def recent_recalls(days: int = 30, sold_at: str = "") -> dict:
+    """List recalls announced in the last `days` days (default 30), newest first.
+
+    `days` is any window from 1 to 365 (not only 30). Pass `sold_at` (Amazon, Walmart, …)
+    to answer 'what was recalled in the last X days that was sold at X' in one call.
+    """
+    return tools.recent_recalls(days, sold_at=sold_at)
 
 
 @mcp.tool()

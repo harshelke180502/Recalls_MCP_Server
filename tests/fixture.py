@@ -39,6 +39,8 @@ ROWS = [
     # number, title, date, product, hazard, units_text, units, sold_at
     ("25201", "Acme Recalls Space Heaters Due to Fire Hazard", "2025-03-01", "Space Heater", "Fire", "About 1,200", 1200, "Walmart stores nationwide"),
     ("25202", "Bolt Recalls Bike Helmets Due to Head Injury Hazard", "2025-06-01", "Bike Helmet", "Head injury", "About 900", 900, "Amazon.com"),
+    # Title says Amazon but sold_at does not — proves sold_at= must not use the keyword `query` columns.
+    ("26100", "Amazon-only Marketing Recalls Night Lights Due to Shock Hazard", "2026-01-05", "Night Light", "Shock", "About 100", 100, "Target stores nationwide"),
     ("26101", "Cedar Recalls Baby Loungers Due to Suffocation Hazard", "2026-01-10", "Baby Lounger", "Suffocation", "About 4,000", 4000, "Amazon.com"),
     ("26102", "Delta Recalls Power Banks Due to Fire Hazard", "2026-01-22", "Power Bank", "Fire", "About 15,000", 15000, "Target stores nationwide"),
     ("26103", "Echo Recalls Dressers Due to Tip-Over Hazard", "2026-02-03", "Dresser", "Tip-over", "About 700", 700, "Wayfair.com"),

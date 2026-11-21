@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "recalls": {
+      "command": "/Users/harsh_shelke/Downloads/ai-native-engineer-exercise-main/.venv/bin/python",
+      "args": ["/Users/harsh_shelke/Downloads/ai-native-engineer-exercise-main/server.py"]
+    }
+  }
+}

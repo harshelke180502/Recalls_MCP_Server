@@ -28,8 +28,9 @@ class ToolTests(unittest.TestCase):
         self.assertEqual([r["recall_number"] for r in out["results"]], ["25202"])
 
     def test_search_matches_where_sold(self):
+        # `query` still searches title too, so the Amazon-in-title fixture row is included.
         out = tools.search_recalls("Amazon")
-        self.assertEqual(out["total"], 3)
+        self.assertEqual(out["total"], 4)
 
     def test_search_matches_hazard(self):
         out = tools.search_recalls("fire")
@@ -41,7 +42,7 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(dates, sorted(dates, reverse=True))
 
     def test_year_filter(self):
-        self.assertEqual(tools.search_recalls(year=2026)["total"], 8)
+        self.assertEqual(tools.search_recalls(year=2026)["total"], 9)
         self.assertEqual(tools.search_recalls(year=2025)["total"], 2)
 
     def test_count_matches_search_total(self):
@@ -56,8 +57,8 @@ class ToolTests(unittest.TestCase):
             if "next_cursor" not in out:
                 break
             cursor = out["next_cursor"]
-        self.assertEqual(len(seen), 10)
-        self.assertEqual(len(set(seen)), 10)
+        self.assertEqual(len(seen), 11)
+        self.assertEqual(len(set(seen)), 11)
 
     def test_limit_is_clamped(self):
         self.assertEqual(limits.clamp_limit(500), limits.MAX_LIMIT)
@@ -83,9 +84,43 @@ class ToolTests(unittest.TestCase):
         out = tools.recent_recalls(30, today=dt.date(2026, 3, 25))
         self.assertEqual([r["recall_number"] for r in out["results"]], ["26108", "26107", "26106", "26105"])
 
+    def test_recent_recalls_sold_at_amazon_last_30_days(self):
+        # Q2: last X days + sold at Amazon in one call. Fixture "today" is 2026-03-25.
+        out = tools.recent_recalls(30, today=dt.date(2026, 3, 25), sold_at="Amazon")
+        self.assertEqual([r["recall_number"] for r in out["results"]], ["26105"])
+        self.assertEqual(out["count"], 1)
+        self.assertEqual(out["sold_at"], "Amazon")
+        self.assertEqual(out["days"], 30)
+
+    def test_recent_recalls_sold_at_respects_day_window(self):
+        # Same retailer, shorter window: 26105 (Feb 28) is outside 7 days before Mar 25.
+        out = tools.recent_recalls(7, today=dt.date(2026, 3, 25), sold_at="Amazon")
+        self.assertEqual(out["results"], [])
+        self.assertEqual(out["days"], 7)
+
+    def test_sold_at_ignores_amazon_in_title(self):
+        # 26100 title contains Amazon but sold_at is Target — must not appear.
+        out = tools.search_recalls(sold_at="Amazon")
+        numbers = [r["recall_number"] for r in out["results"]]
+        self.assertEqual(out["total"], 3)
+        self.assertNotIn("26100", numbers)
+        self.assertEqual(tools.count_recalls(sold_at="Amazon")["count"], 3)
+
+    def test_count_sold_at_matches_search(self):
+        self.assertEqual(
+            tools.count_recalls(sold_at="Walmart")["count"],
+            tools.search_recalls(sold_at="Walmart")["total"],
+        )
+
+    def test_recent_days_are_clamped(self):
+        out = tools.recent_recalls(0, today=dt.date(2026, 3, 25))
+        self.assertEqual(out["days"], 30)
+        out = tools.recent_recalls(999, today=dt.date(2026, 3, 25))
+        self.assertEqual(out["days"], 365)
+
     def test_status_reports_last_load(self):
         status = tools.server_status()
-        self.assertEqual(status["recalls_loaded"], 10)
+        self.assertEqual(status["recalls_loaded"], 11)
         self.assertEqual(status["last_load_status"], "ok")
         self.assertEqual(status["last_load_at"], "2026-03-25T02:00:07Z")
 
