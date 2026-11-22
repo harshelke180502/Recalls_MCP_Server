@@ -87,6 +87,21 @@ class ToolTests(unittest.TestCase):
         self.assertEqual(notes[-1]["body"], "Checked the catalogue, nothing listed.")
         self.assertEqual(notes[-1]["author"], "agent:test")
 
+    # Q5: add_note("26-102") then get_recall("26102") / "26-102" both see the note.
+    def test_add_note_normalizes_dashed_number(self):
+        saved = tools.add_note("26-103", "Legal is reviewing our listings.")
+        self.assertTrue(saved["saved"])
+        self.assertEqual(saved["recall_number"], "26103")
+        self.assertEqual(tools.get_recall("26-103")["notes"][-1]["body"], "Legal is reviewing our listings.")
+        self.assertEqual(tools.get_recall("26103")["notes"][-1]["body"], "Legal is reviewing our listings.")
+
+    # Q5: "Recall 26-104" strips to 26104 like get_recall.
+    def test_add_note_normalizes_prefixed_number(self):
+        saved = tools.add_note("Recall 26-104", "Checked listings.")
+        self.assertTrue(saved["saved"])
+        self.assertEqual(saved["recall_number"], "26104")
+        self.assertEqual(tools.get_recall("26104")["notes"][-1]["body"], "Checked listings.")
+
     # Q5 variation: empty note is rejected.
     def test_add_note_rejects_empty(self):
         self.assertFalse(tools.add_note("26102", "   ")["saved"])

@@ -123,15 +123,17 @@ def recent(days: int, today: dt.date | None = None, limit: int = 50, sold_at: st
 
 
 def add_note(recall_number: str, body: str, author: str) -> dict:
+    # Same digit-only key as get_recall, so Q5 "27-010" then get still finds the note.
+    number = normalize_recall_number(recall_number)
     created = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     with connect() as con:
         cur = con.execute(
             "INSERT INTO notes (recall_number, author, body, created_at) VALUES (?, ?, ?, ?)",
-            [recall_number.strip(), author, body.strip(), created],
+            [number, author, body.strip(), created],
         )
         con.commit()
         note_id = cur.lastrowid
-    return {"id": note_id, "recall_number": recall_number.strip(), "author": author, "created_at": created}
+    return {"id": note_id, "recall_number": number, "author": author, "created_at": created}
 
 
 def status() -> dict:
