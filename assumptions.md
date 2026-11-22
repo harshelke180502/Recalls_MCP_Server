@@ -39,3 +39,11 @@ Commented sketch (not wired up):
 ```
 
 Until she answers, the live path stays **max on one recall_number** (see `_order` in `recalls_server/db.py`).
+
+---
+
+## Q5 — how the recall number is shown
+
+**Assumption:** It is fine to **show** the number the way the user typed it (`27-010`). The important part is that **save and load use the same digit key** (`27010`) so the note appears. I did **not** change the chat/UI to print only the normalized form.
+
+`add_note` and `get_recall` both strip to digits in the DB. If Dana wanted the tool payload and the agent reply to always show `27010`, that would be a small display change on the returned `recall_number` (already normalized on save) and on `get_recall` echoing CPSC’s dashed style vs digits. Not built; called out as unchecked.

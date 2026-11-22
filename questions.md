@@ -11,3 +11,9 @@ Dana was out until Monday, so these are the questions I would have asked before 
 3. If two different recall numbers truly tie on `units`, which one should we return (newer date, either, both)?
 
 4. Should “how many” be the parsed **`units`** integer, or the original **`units_text`** (“About 1,200”)?
+
+## Q5 — add a note, then show the recall
+
+5. After `add_note` / `get_recall` normalize `27-010` to `27010` in SQLite, should the agent **display** the recall number as stored (`27010`) or as the user typed it (`27-010`)?
+
+6. Is it enough that the note is attached and readable, even if the chat still prints `27-010`?
