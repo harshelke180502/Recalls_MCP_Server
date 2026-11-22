@@ -16,6 +16,6 @@
 | Q4 Walmart count | fuzzy `query=Walmart` | `count_recalls(sold_at=Walmart)` → 161 |
 | Q5 note 27-010 | add then get, **empty notes** (dash vs digits) | same two tools; note shows. Chat still says 27-010 |
 
-**Did not check:** sum of units for a year or retailer; Q3 grouped duplicates; whether Q5 must **display** the normalized number. Time and Dana being unreachable.
+**Did not check:** sum of units for a year or retailer; Q3 grouped duplicates; whether Q5 must **display** the normalized number. Due to time constraints and the ambiguity in q3 in test cases with respect to max/sum - so due to ambiguity of the test case I choose to go forward with max of the recall units(as it said most) instead of calculating the sum.
 
 **AI:** Cursor for the code and for all live MCP chats.
